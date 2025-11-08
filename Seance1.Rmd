@@ -1,0 +1,1066 @@
+---
+title: |
+  \includegraphics[height=2cm]{logo_nanterre.jpg} 
+  \vspace{1cm}
+  \par
+  \textbf{Analyse des modèles cinématographiques régionaux}
+author: |
+  \textbf{Oumar Mahamat}  \\ 
+  \textbf{Numéro étudiant : 38018427}
+date: "`r Sys.Date() - 1`"
+output: 
+  pdf_document:
+    latex_engine: xelatex
+geometry: margin=1cm
+header-includes:
+  - \usepackage{graphicx}
+  - \usepackage{fontspec}
+---
+
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+```
+
+  
+
+## 1. Analyse descriptive des entrées et équipements par région
+
+### 1.1 Distribution des entrées cinématographiques par région
+
+### 1.2 Distribution du nombre de salles par région
+
+
+```{r load-data, include=FALSE}
+library(dplyr)
+library(ggplot2)
+library(knitr)
+
+# Chargement des données
+data <- read.csv("C:/Users/omaha/Downloads/Cinema.csv", sep = ";", header = TRUE)
+
+# Résumé descriptif par région
+resume_region <- data %>%
+  group_by(Region) %>%
+  summarise(
+    Moyenne_Entrees = round(mean(Entr, na.rm = TRUE), 2),
+    Moyenne_Salles = round(mean(Salle, na.rm = TRUE), 2),
+    Moyenne_Etablissements = round(mean(Etab, na.rm = TRUE), 2),
+    Moyenne_Seances_Art_Essai = round(mean(Artes, na.rm = TRUE), 2),
+    N = n()
+  )
+```
+
+
+## Distribution des entrées par région
+```{r boxplot-entrees, fig.height=4, fig.width=10}
+ggplot(data, aes(x = reorder(Region, Entr, median), y = Entr, fill = Region)) +
+  geom_boxplot() +
+  labs(title = "Distribution des entrées cinématographiques par région",
+       y = "Entrées (en milliers)",
+       x = "Région") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8),
+        legend.position = "none",
+        plot.title = element_text(size = 12))
+```
+
+**Interprétation :** Ce graphique montre la distribution des entrées cinématographiques (en milliers) pour chaque région française. On observe une forte hétérogénéité entre les régions : Île-de-France se distingue nettement avec la fréquentation la plus élevée et la plus grande variabilité, reflétant la concentration de population et l'offre culturelle importante. Les régions Auvergne-Rhône-Alpes et Provence-Alpes-Côte d'Azur présentent des fréquentations moyennes élevées, tandis que les régions comme Centre-Val de Loire et Bourgogne-Franche-Comté montrent des fréquentations plus modestes.
+
+## Distribution du nombre de salles par région
+```{r boxplot-salles, fig.height=4, fig.width=10}
+ggplot(data, aes(x = reorder(Region, Salle, median), y = Salle, fill = Region)) +
+  geom_boxplot() +
+  labs(title = "Distribution du nombre de salles par région",
+       y = "Nombre de salles",
+       x = "Région") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8),
+        legend.position = "none",
+        plot.title = element_text(size = 12))
+```
+
+**Interprétation :** Ce graphique présente la distribution du nombre de salles de cinéma par région. On constate une corrélation générale entre le nombre de salles et la fréquentation. Île-de-France domine à nouveau avec le plus grand nombre de salles et la plus forte dispersion. Certaines régions comme Nouvelle-Aquitaine et Occitanie montrent un parc de salles important mais avec une fréquentation relativement plus faible. Les valeurs extrêmes indiquent des situations particulières dans certaines régions.
+
+## Tableau récapitulatif
+```{r tableau-recap}
+# Création d'un tableau récapitulatif plus lisible
+tableau_recap <- resume_region %>%
+  arrange(desc(Moyenne_Entrees)) %>%
+  rename("Région" = Region, "Entrées moy." = Moyenne_Entrees, "Salles moy." = Moyenne_Salles, 
+         "Étab. moy." = Moyenne_Etablissements, "Art & Essai moy." = Moyenne_Seances_Art_Essai, "Nb obs." = N)
+
+kable(tableau_recap, 
+      caption = "Indicateurs cinématographiques par région (classement par fréquentation)",
+      align = c('l', 'r', 'r', 'r', 'r', 'r'))
+```
+
+**Interprétation :** Ce tableau synthétise les indicateurs clés par région, classées par ordre décroissant de fréquentation. Il confirme les observations graphiques et identifie les régions les plus dynamiques en termes de fréquentation, d'équipement et d'offre culturelle (séances art et essai).
+
+
+## 2. Analyse départementale de la fréquentation
+
+### 2.1 Distribution des entrées par département
+
+### 2.2 Caractéristiques de la distribution (asymétrie, moyenne, médiane)
+
+### 2.3 Identification des départements extrêmes
+
+
+```{r distribution-frequentation, fig.height=6, fig.width=10, echo=FALSE, warning=FALSE}
+library(tidyverse)
+library(ggrepel)
+
+# Statistiques descriptives
+frequentation_stats <- data %>%
+  summarise(
+    Moyenne_Entr = mean(Entr, na.rm = TRUE),
+    Mediane_Entr = median(Entr, na.rm = TRUE)
+  )
+
+# Départements extrêmes (top 5 et bottom 5)
+top_bottom <- data %>%
+  arrange(desc(Entr)) %>%
+  slice(c(1:5, (n()-4):n()))
+
+# Histogramme de la distribution
+ggplot(data, aes(x = Entr)) +
+  geom_histogram(binwidth = 0.5, fill = "#2E8B57", color = "black", alpha = 0.7) +
+  geom_vline(aes(xintercept = mean(Entr, na.rm = TRUE)), color = "red", linetype = "dashed", size = 1) +
+  geom_vline(aes(xintercept = median(Entr, na.rm = TRUE)), color = "blue", linetype = "dashed", size = 1) +
+  geom_text_repel(data = top_bottom, aes(x = Entr, y = 1, label = NomDep),
+                  angle = 45, nudge_y = 1, size = 3, segment.color = "grey50") +
+  theme_minimal(base_size = 13) +
+  labs(
+    title = "Distribution des entrées par département",
+    subtitle = "Ligne rouge = Moyenne | Ligne bleue = Médiane | Étiquettes = départements extrêmes",
+    x = "Nombre d'entrées (millions)",
+    y = "Nombre de départements"
+  )
+```
+
+## Interprétation de la distribution
+
+### 📈 **Caractéristiques de la distribution**
+
+**Forme générale** :
+- Distribution asymétrique avec une longue queue à droite
+- Majorité des départements concentrés dans les faibles fréquentations
+- Quelques départements présentent des valeurs exceptionnellement élevées
+
+**Mesures de tendance centrale** :
+- **Moyenne** (ligne rouge) : environ `r round(frequentation_stats$Moyenne_Entr, 2)` millions d'entrées
+- **Médiane** (ligne bleue) : environ `r round(frequentation_stats$Mediane_Entr, 2)` millions d'entrées
+- L'écart entre moyenne et médiane confirme la présence de valeurs extrêmes
+
+###  **Départements remarquables**
+
+**Départements à très haute fréquentation** :
+- **Paris** et sa région
+- **Grandes métropoles** régionales
+- Zones touristiques littorales
+
+**Départements à faible fréquentation** :
+- Zones rurales peu densément peuplées
+- Territoires éloignés des grands centres urbains
+
+
+**Conclusion** : Cette distribution confirme et quantifie les importantes disparités territoriales mises en évidence dans les analyses précédentes, renforçant la nécessité d'approches différenciées selon les types de territoires.
+
+
+## 3. Analyse de la pénétration des multiplexes
+
+### 3.1 Pourcentage de départements sans multiplexe par région
+
+### 3.2 Typologie des régions selon l’équipement en multiplexes
+
+### 3.3 Cartographie des zones sous-équipées
+
+
+```{r analyse-multiplex, fig.height=6, fig.width=10, echo=FALSE, warning=FALSE}
+library(tidyverse)
+
+# Comptage des départements sans multiplexe
+sans_multiplex <- data %>%
+  filter(Multi == 0) %>%
+  count(Region) %>%
+  rename(Departements_sans_Multi = n)
+
+# Pourcentage de départements sans multiplex par région
+total_par_region <- data %>%
+  group_by(Region) %>%
+  summarise(Total_Dep = n())
+
+sans_multiplex <- sans_multiplex %>%
+  left_join(total_par_region, by = "Region") %>%
+  mutate(Pourcentage = Departements_sans_Multi / Total_Dep * 100)
+
+# Visualisation : barplot des départements sans multiplex
+ggplot(sans_multiplex, aes(x = reorder(Region, -Pourcentage), y = Pourcentage)) +
+  geom_col(fill = "#FF6347", color = "black", alpha = 0.8) +
+  geom_text(aes(label = paste0(round(Pourcentage, 1), "%")), vjust = -0.5, size = 3.5) +
+  theme_minimal(base_size = 12) +
+  labs(
+    title = "Répartition des départements sans multiplex par région",
+    subtitle = "Pourcentage de départements sans multiplex par région française",
+    x = "Région",
+    y = "Pourcentage de départements sans multiplex (%)"
+  ) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+
+###  **Analyse régionale de l'équipement en multiplexes**
+
+**Régions les plus sous-équipées** (taux > 80%) :
+- Bretagne, Occitanie, Centre-Val-de-Loire
+- Profil : Régions à dominante rurale ou avec des pôles urbains dispersés
+- Enjeu : Manque d'infrastructures cinématographiques modernes
+
+**Régions moyennement équipées** (taux 50-80%) :
+- Auvergne-Rhône-Alpes, Grand-Est, Hauts-de-France
+- Profil : Mixité urbain-rural avec quelques pôles majeurs
+- Enjeu : Équipement inégal entre métropoles et zones périphériques
+
+**Régions mieux équipées** (taux < 50%)
+
+**Conclusion** : La carte des multiplexes révèle une fracture territoriale importante dans l'équipement cinématographique moderne, avec des régions entières laissées en marge des investissements en salles multiplexes. 
+
+
+
+
+## 4. Analyse évolutive de la fréquentation (2001–2002)
+
+### 4.1 Évolution interannuelle par département
+
+
+
+```{r evolution-frequentation, fig.height=7, fig.width=12, echo=FALSE, warning=FALSE}
+library(tidyverse)
+library(ggrepel)
+
+# Préparer les données
+data_long <- data %>%
+  dplyr::mutate(
+    Evol_sign = case_when(
+      Evol > 0 ~ "Hausse",
+      Evol < 0 ~ "Baisse", 
+      TRUE ~ "Stable"
+    ),
+    Entr_2001 = Entr - Evol  # estimation des entrées 2001
+  ) %>%
+  dplyr::select(NomDep, Entr, Evol, Evol_sign, Entr_2001) %>%
+  pivot_longer(
+    cols = c("Entr_2001", "Entr"),
+    names_to = "Annee",
+    values_to = "Entrees"
+  ) %>%
+  dplyr::mutate(Annee = ifelse(Annee == "Entr_2001", "2001", "2002"))
+
+# Identifier les départements extrêmes pour labels
+top_extremes <- data %>%
+  dplyr::arrange(desc(abs(Evol))) %>%
+  dplyr::slice(1:5) %>%
+  dplyr::pull(NomDep)
+
+# Visualisation
+ggplot(data_long, aes(x = reorder(NomDep, Entrees), y = Entrees, fill = Annee)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.8)) +
+  geom_hline(yintercept = 0, color = "red", linetype = "dashed", size = 1) +
+  geom_text_repel(
+    data = subset(data_long, NomDep %in% top_extremes & Annee == "2002"),
+    aes(label = NomDep),
+    size = 3,
+    nudge_y = 0.5,
+    segment.color = "grey50"
+  ) +
+  scale_fill_manual(values = c("2001" = "skyblue", "2002" = "orange")) +
+  labs(
+    title = "Évolution de la fréquentation par département (2001 vs 2002)",
+    x = "Départements",
+    y = "Nombre d'entrées (millions)",
+    fill = "Année"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank()
+  )
+```
+
+
+
+### **Analyse **
+
+
+- La majorité des départements présentent une évolution modérée entre 2001 et 2002
+- Peu de variations brutales observées sur l'ensemble du territoire
+
+**Départements à forte dynamique** :
+- Certains territoires montrent des progressions significatives
+- D'autres connaissent des reculs notables
+
+
+
+
+
+
+## 5. Analyse de la capacité moyenne des salles
+
+### 5.1 Distribution des capacités par région et département
+
+### 5.2 Comparaison avec la moyenne nationale
+
+### 5.3 Départements aux capacités exceptionnelles
+
+
+```{r capacite-salles, fig.height=7, fig.width=12, echo=FALSE, warning=FALSE}
+library(tidyverse)
+library(ggrepel)
+
+# Calcul de la capacité moyenne par salle
+data <- data %>%
+  mutate(Capacite_moy_salle = Faut / Salle)
+
+# Identifier les départements extrêmes pour annotation
+extremes <- data %>%
+  arrange(desc(Capacite_moy_salle)) %>%
+  slice(1:5)  # top 5 départements
+
+# Violin + points
+ggplot(data, aes(x = Region, y = Capacite_moy_salle, color = Region)) +
+  geom_violin(alpha = 0.3, fill = NA) +           # distribution par région
+  geom_jitter(width = 0.2, size = 2, alpha = 0.8) + # points pour chaque département
+  geom_hline(yintercept = mean(data$Capacite_moy_salle, na.rm = TRUE), 
+             linetype = "dashed", color = "red", size = 1) +
+  geom_text_repel(
+    data = extremes,
+    aes(x = Region, y = Capacite_moy_salle, label = NomDep),
+    nudge_x = 0.3,
+    size = 3,
+    show.legend = FALSE
+  ) +
+  labs(
+    title = "Capacité moyenne des salles par région",
+    subtitle = "Distribution des capacités par département avec ligne rouge = moyenne nationale",
+    x = "Région",
+    y = "Capacité moyenne (fauteuils/salle)",
+    color = "Région"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    legend.position = "bottom",
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+```
+
+
+###  **Indicateurs statistiques descriptifs**
+
+```{r stats-capacite, echo=FALSE}
+stats_capacite <- data %>%
+  summarise(
+    Moyenne_Nationale = mean(Capacite_moy_salle, na.rm = TRUE),
+    Median_Nationale = median(Capacite_moy_salle, na.rm = TRUE),
+    Ecart_Type = sd(Capacite_moy_salle, na.rm = TRUE),
+    Coefficient_Variation = (Ecart_Type / Moyenne_Nationale) * 100,
+    Min_Capacite = min(Capacite_moy_salle, na.rm = TRUE),
+    Max_Capacite = max(Capacite_moy_salle, na.rm = TRUE)
+  )
+
+stats_region <- data %>%
+  group_by(Region) %>%
+  summarise(
+    Moyenne_Region = mean(Capacite_moy_salle, na.rm = TRUE),
+    Ecart_Moyenne_Nationale = Moyenne_Region - stats_capacite$Moyenne_Nationale
+  ) %>%
+  arrange(desc(Moyenne_Region))
+
+cat("Capacité moyenne nationale :", round(stats_capacite$Moyenne_Nationale, 1), "fauteuils/salle\n")
+cat("Écart-type :", round(stats_capacite$Ecart_Type, 1), "fauteuils/salle\n")
+cat("Coefficient de variation :", round(stats_capacite$Coefficient_Variation, 1), "%\n")
+```
+
+## Interprétation des résultats
+
+###  **Analyse de la distribution des capacités**
+
+**Dispersion géographique** :
+- Variabilité importante entre et au sein des régions
+- Certaines régions montrent une distribution homogène
+- D'autres présentent une grande hétérogénéité interne
+
+**Positionnement relatif** :
+- Régions structurellement au-dessus de la moyenne nationale
+- Régions systématiquement en-dessous du benchmark national
+- Écarts significatifs entre territoires comparables
+
+###  **Départements aux capacités exceptionnelles**
+
+**Départements à haute capacité** :
+- Infrastructures modernes et récentes
+- Présence de multiplexes de grande taille
+
+
+
+
+
+
+
+
+
+
+
+
+
+## 6. Analyse de l’intensité d’utilisation des salles
+
+### 6.1 Séances par salle selon la taille des départements
+
+### 6.2 Tableau des départements aux performances remarquables
+
+### 6.3 Statistiques descriptives par quartile de population
+
+### 6.4 Mesure de l’efficience opérationnelle
+
+
+```{r intensite-utilisation, fig.height=7, fig.width=12, echo=FALSE, warning=FALSE}
+library(tidyverse)
+library(ggplot2)
+
+# Calcul de l'intensité d'utilisation
+data <- data %>%
+  mutate(Sessions_par_salle = Sean / Salle)  # séances par salle
+
+# Création de groupes selon la taille de la population (quartiles)
+data <- data %>%
+  mutate(Pop_group = ntile(Pop, 4))  # 1 = plus petit quartile, 4 = plus grand
+
+# Renommer les groupes pour plus de clarté
+data$Pop_group <- factor(data$Pop_group,
+                         levels = 1:4,
+                         labels = c("Q1 (petit)", "Q2", "Q3", "Q4 (grand)"))
+
+# Statistiques par groupe
+stats_group <- data %>%
+  group_by(Pop_group) %>%
+  summarise(
+    Moyenne = mean(Sessions_par_salle, na.rm = TRUE),
+    Mediane = median(Sessions_par_salle, na.rm = TRUE),
+    SD = sd(Sessions_par_salle, na.rm = TRUE),
+    n = n()
+  )
+
+# Visualisation améliorée avec légendes explicites
+ggplot(data, aes(x = Pop_group, y = Sessions_par_salle)) +
+  geom_boxplot(fill = "skyblue", alpha = 0.6, outlier.color = "red") +
+  geom_jitter(width = 0.15, alpha = 0.5, color = "darkblue") +
+  stat_summary(fun = mean, geom = "point", shape = 18, size = 3, color = "orange") +
+  annotate("text", x = 1, y = max(data$Sessions_par_salle, na.rm = TRUE),
+           label = "Boxplot bleu clair = distribution des départements", hjust = 0, size = 3.5, color = "blue") +
+  annotate("text", x = 1, y = max(data$Sessions_par_salle, na.rm = TRUE)*0.95,
+           label = "Points bleu foncé = chaque département", hjust = 0, size = 3.5, color = "darkblue") +
+  annotate("text", x = 1, y = max(data$Sessions_par_salle, na.rm = TRUE)*0.90,
+           label = "Point orange = moyenne du quartile", hjust = 0, size = 3.5, color = "orange") +
+  annotate("text", x = 1, y = max(data$Sessions_par_salle, na.rm = TRUE)*0.85,
+           label = "Points rouges = outliers (départements atypiques)", hjust = 0, size = 3.5, color = "red") +
+  labs(
+    title = "Intensité d'utilisation des salles par taille de département",
+    subtitle = "Séances par salle selon les quartiles de population",
+    x = "Quartile de population",
+    y = "Séances par salle (milliers)"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
+```
+
+## Interprétation des résultats
+
+###  **Analyse des distributions par quartile**
+
+**Variabilité intra-groupe** :
+- Dispersion significative observée dans tous les quartiles
+- Écarts importants entre départements de même taille démographique
+- Présence d'outliers dans plusieurs catégories
+
+**Tendances inter-quartiles** :
+- Différences structurelles entre groupes de population
+- Performances relatives des différents segments démographiques
+- Homogénéité/hétérogénéité variable selon les quartiles
+
+### **Départements aux performances remarquables**
+
+```{r tableau-performances, echo=FALSE}
+departements_remarquables <- data %>%
+  filter(NomDep %in% c("PARIS", "RHIN-BAS", "INDRE", "ILLE-ET-VILAINE")) %>%
+  select(Département = NomDep, 
+         "Séances par salle" = Sessions_par_salle, 
+         "Groupe population" = Pop_group) %>%
+  arrange(desc(`Séances par salle`))
+
+knitr::kable(departements_remarquables, 
+             caption = "Départements aux intensités d'utilisation remarquables")
+```
+
+**Analyse des cas particuliers** :  
+- **PARIS** : Performance exceptionnelle dans le quartile supérieur  
+- **RHIN-BAS** : Forte intensité d'utilisation notable  
+- **INDRE** : Performance remarquable dans le petit quartile  
+- **ILLE-ET-VILAINE** : Bonne intensité dans le grand quartile
+
+
+###  **Statistiques descriptives par quartile**
+
+```{r stats-intensite, echo=FALSE}
+stats_detaillees <- data %>%
+  group_by(Pop_group) %>%
+  summarise(
+    "Moyenne séances/salle" = round(mean(Sessions_par_salle, na.rm = TRUE), 3),
+    "Médiane séances/salle" = round(median(Sessions_par_salle, na.rm = TRUE), 3),
+    "Écart-type" = round(sd(Sessions_par_salle, na.rm = TRUE), 3),
+    "Nombre départements" = n(),
+    .groups = 'drop'
+  )
+
+knitr::kable(stats_detaillees, 
+             caption = "Statistiques d'intensité d'utilisation par quartile de population")
+```
+
+
+**Conclusion** :On constate que la population explique largement l'équipement cinématographique, mais l'intensité d'utilisation des salles varie significativement entre territoires de taille comparable.
+
+
+
+
+
+
+
+## 7. Analyse des corrélations démographiques et économiques
+
+### 7.1 Matrice de corrélations entre variables clés
+
+### 7.2 Relation Population – Nombre d’établissements
+
+### 7.3 Relation Population – Recettes
+
+
+
+```{r analyse-demographique, fig.height=7, fig.width=12, echo=FALSE, warning=FALSE}
+library(tidyverse)
+library(broom)
+library(ggrepel)
+library(corrplot)
+
+# --- 1. PRÉPARATION DES DONNÉES ---
+#cat("🔍 PRÉPARATION DES DONNÉES DÉMOGRAPHIQUES\n")
+# Création d'indicateurs démographiques et structurels
+data_demo <- data %>%
+  mutate(
+    Densite_pop = Pop / Comm,
+    Salles_par_habitant = Salle / Pop,
+    Etabs_par_habitant = Etab / Pop
+  )
+
+# --- 2. MATRICE DE CORRÉLATIONS AVEC TESTS DE SIGNIFICATIVITÉ ---
+cat("\n MATRICE DE CORRÉLATIONS AVEC SIGNIFICATIVITÉ\n")
+
+# Variables sélectionnées pour l'analyse
+vars_correlation <- c("Pop", "Densite_pop", "Salle", "Etab", "Multi", "Rece")
+
+# Calcul des corrélations
+cor_demo <- data_demo %>%
+  dplyr::select(all_of(vars_correlation)) %>%
+  cor(use = "complete.obs")
+
+# Fonction pour calculer les p-values des corrélations
+cor.mtest <- function(mat, conf.level = 0.95) {
+  mat <- as.matrix(mat)
+  n <- ncol(mat)
+  p.mat <- matrix(NA, n, n)
+  diag(p.mat) <- 0
+  for (i in 1:(n - 1)) {
+    for (j in (i + 1):n) {
+      tmp <- cor.test(mat[, i], mat[, j], conf.level = conf.level)
+      p.mat[i, j] <- p.mat[j, i] <- tmp$p.value
+    }
+  }
+  colnames(p.mat) <- rownames(p.mat) <- colnames(mat)
+  p.mat
+}
+
+# Calcul des p-values
+p_values <- cor.mtest(data_demo %>% dplyr::select(all_of(vars_correlation)))
+
+# Visualisation de la matrice de corrélations
+corrplot(cor_demo, 
+         method = "color", 
+         type = "upper", 
+         order = "original",
+         tl.cex = 0.8,
+         p.mat = p_values,
+         sig.level = c(0.001, 0.01, 0.05),
+         insig = "label_sig",
+         title = "Matrice de corrélations - Variables démographiques et équipement")
+```
+
+##  Interprétation de la matrice de corrélations
+
+**Relations statistiquement significatives :**
+
+### **Corrélations FORTES (r > 0.7)**
+- **Population ↔ Établissements** : `r round(cor_demo["Pop", "Etab"], 3)`***
+- **Population ↔ Salles** : `r round(cor_demo["Pop", "Salle"], 3)`***
+- **Population ↔ Recettes** : `r round(cor_demo["Pop", "Rece"], 3)`***
+- **Salles ↔ Recettes** : `r round(cor_demo["Salle", "Rece"], 3)`***
+
+**Interprétation** : La taille démographique est fortement liée à l'équipement cinématographique et aux performances économiques.
+
+### **Corrélations MODÉRÉES (0.3 < r < 0.7)**
+- **Établissements ↔ Recettes** : `r round(cor_demo["Etab", "Rece"], 3)`***
+- **Multiplexes ↔ Population** : `r round(cor_demo["Multi", "Pop"], 3)`***
+
+**Interprétation** : La présence de multiplexes est modérément corrélée avec la population, suggérant des stratégies d'implantation spécifiques.
+
+### **Corrélations FAIBLES (r < 0.3)**
+- **Densité population ↔ Équipement** : Relations généralement faibles
+
+**Interprétation** : La densité de population n'est pas un déterminant majeur de l'équipement ou des recettes.
+
+
+
+```{r relation-population-etablissements, fig.height=6, fig.width=10, echo=FALSE}
+# --- 3. RELATION POPULATION - ÉTABLISSEMENTS ---
+cat("\n RELATION POPULATION - ÉTABLISSEMENTS\n")
+
+modele_etabs <- lm(Etab ~ Pop, data = data)
+summary_etabs <- summary(modele_etabs)
+r_squared_etabs <- round(summary_etabs$r.squared, 3)
+p_value_etabs <- round(summary_etabs$coefficients[2,4], 4)
+
+# Sélectionner les 15 départements les plus intéressants
+data_selected_etabs <- data %>%
+  mutate(
+    residus = abs(residuals(modele_etabs)),
+    score = rank(Pop) + rank(Etab) + rank(residus)
+  ) %>%
+  arrange(desc(score)) %>%
+  head(15)
+
+# Graphique avec intervalle de confiance
+plot_etabs <- ggplot() +
+  geom_point(data = data, aes(x = Pop, y = Etab), color = "darkgreen", alpha = 0.7, size = 2) +
+  geom_point(data = data_selected_etabs, aes(x = Pop, y = Etab), color = "red", size = 3) +
+  geom_smooth(data = data, aes(x = Pop, y = Etab), method = "lm", se = TRUE, 
+              color = "orange", fill = "orange", alpha = 0.2) +
+  geom_text_repel(
+    data = data_selected_etabs,
+    aes(x = Pop, y = Etab, label = NomDep), 
+    size = 3, 
+    max.overlaps = 20,
+    box.padding = 0.3,
+    force = 1
+  ) +
+  labs(
+    title = paste("Relation Population - Établissements (R² =", r_squared_etabs, ")"),
+    x = "Population (millions d'habitants)",
+    y = "Nombre d'établissements",
+    subtitle = paste("p-value =", p_value_etabs, "- Intervalle de confiance à 95%")
+  ) +
+  theme_minimal()
+
+print(plot_etabs)
+```
+
+##  Interprétation de la relation Population - Établissements
+
+**Relation linéaire significative :**  
+- **R² = `r r_squared_etabs`** : La population explique `r round(r_squared_etabs * 100, 1)`% de la variance du nombre d'établissements  
+- **p-value = `r p_value_etabs`** : Relation hautement significative (p < 0.001)  
+- **Pente positive** : Chaque million d'habitants supplémentaire correspond à environ `r round(summary_etabs$coefficients[2,1], 1)` établissements supplémentaires
+
+
+**Départements remarquables :**
+
+### **Au-DESSUS de la tendance (points rouges)**
+- Sur-équipement relatif par rapport à leur population
+
+### **Sur la TENDANCE (points verts)**
+- Adéquation entre équipement et population
+
+### **En-DESSOUS de la tendance**
+- Sous-équipement relatif
+- Territoires prioritaires pour le développement culturel
+
+**Intervalle de confiance** : La zone orange montre l'incertitude autour de la tendance moyenne, plus large aux extrêmes de population.
+
+```{r relation-population-recettes, fig.height=6, fig.width=10, echo=FALSE}
+# --- 4. RELATION POPULATION - RECETTES ---
+cat("\n RELATION POPULATION - RECETTES\n")
+
+modele_rece <- lm(Rece ~ Pop, data = data)
+summary_rece <- summary(modele_rece)
+r_squared_rece <- round(summary_rece$r.squared, 3)
+p_value_rece <- round(summary_rece$coefficients[2,4], 4)
+
+# Sélectionner les 15 départements les plus intéressants
+data_selected_rece <- data %>%
+  mutate(
+    residus = abs(residuals(modele_rece)),
+    score = rank(Pop) + rank(Rece) + rank(residus)
+  ) %>%
+  arrange(desc(score)) %>%
+  head(15)
+
+# Graphique avec intervalle de confiance
+plot_rece <- ggplot() +
+  geom_point(data = data, aes(x = Pop, y = Rece), color = "brown", alpha = 0.7, size = 2) +
+  geom_point(data = data_selected_rece, aes(x = Pop, y = Rece), color = "blue", size = 3) +
+  geom_smooth(data = data, aes(x = Pop, y = Rece), method = "lm", se = TRUE, 
+              color = "darkgreen", fill = "darkgreen", alpha = 0.2) +
+  geom_text_repel(
+    data = data_selected_rece,
+    aes(x = Pop, y = Rece, label = NomDep), 
+    size = 3, 
+    max.overlaps = 20,
+    box.padding = 0.3,
+    force = 1
+  ) +
+  labs(
+    title = paste("Relation Population - Recettes (R² =", r_squared_rece, ")"),
+    x = "Population (millions d'habitants)",
+    y = "Recettes (millions €)",
+    subtitle = paste("p-value =", p_value_rece, "- Intervalle de confiance à 95%")
+  ) +
+  theme_minimal()
+
+print(plot_rece)
+```
+
+ 
+##  Interprétation de la relation Population – Recettes
+
+- **R² = `r r_squared_rece`** : la population explique `r round(r_squared_rece * 100, 1)` % de la variance des recettes.  
+- **p-value = `r p_value_rece`** : relation hautement significative (p < 0.001).  
+- **Pente estimée** : chaque million d’habitants correspond à environ `r round(summary_rece$coefficients[2,1], 1)` M€ de recettes supplémentaires.  
+
+**Distribution selon les couleurs du graphique :**
+
+###  **Points bleus (surperformants économiques)**
+- Départements dont les recettes sont supérieures à la tendance moyenne prévue par le modèle — ils se distinguent par une performance économique plus élevée que la moyenne.
+
+###  **Points bruns (performances conformes)**
+- Départements dont les recettes sont globalement cohérentes avec la tendance moyenne ; ils illustrent un équilibre entre population et recettes.
+
+### **Autres points (sous-performants)**
+- Départements dont les recettes sont inférieures à la tendance estimée, traduisant un potentiel d’exploitation plus faible ou des facteurs contextuels défavorables.
+
+**Remarque statistique :**
+- La relation n’est pas parfaitement linéaire — certains petits départements génèrent des recettes disproportionnées.
+
+
+
+
+
+
+## 8. Analyse en Composantes Principales (ACP)
+
+### 8.1 Préparation des données et valeurs propres
+
+### 8.2 Critère de Kaiser et sélection des axes
+
+### 8.3 Cercle des corrélations : interprétation des dimensions
+
+### 8.4 Projection des départements sur le plan factoriel
+
+
+
+
+```{r acp-complete, fig.height=8, fig.width=12, echo=FALSE, warning=FALSE}
+library(tidyverse)
+library(FactoMineR)
+library(factoextra)
+library(corrplot)
+library(ggrepel)
+
+# --- 1️⃣ PRÉPARATION DES DONNÉES ---
+#cat("🔍 PRÉPARATION DES DONNÉES\n")
+
+# Sélection des variables quantitatives pour ACP
+vars_acp <- data %>%
+  dplyr::select(Pop, Entr, Rece, Sean, Comm, Etab, Salle, Faut, Artes, Multi)
+
+# Vérification des données manquantes
+#cat("Données manquantes :", sum(is.na(vars_acp)), "\n")
+
+# Centrage-réduction obligatoire pour ACP normée
+vars_acp_scaled <- scale(vars_acp)
+
+# ---  RÉALISATION DE L'ACP NORMEÉ ---
+#cat("\n RÉALISATION DE L'ACP NORMEÉ\n")
+
+res_acp <- PCA(vars_acp_scaled, scale.unit = TRUE, graph = FALSE)
+
+# ---  ANALYSE DES VALEURS PROPRES ET SÉLECTION DES AXES ---
+#cat("\n ANALYSE DES VALEURS PROPRES\n")
+
+eig_vals <- res_acp$eig
+#cat("Valeurs propres (λ) :\n")
+#print(round(eig_vals, 3))
+
+# Application du CRITÈRE DE KAISER (λ ≥ 1)
+n_axes_kaiser <- sum(eig_vals[,1] >= 1)
+#cat("\n CRITÈRE DE KAISER :", n_axes_kaiser, "axes à retenir (λ ≥ 1)\n")
+
+# Pourcentage d'inertie cumulée
+inertie_cumulee <- cumsum(eig_vals[,2])
+variance_axes_1_2 <- round(sum(eig_vals[1:2, 2]), 1)
+#cat("Inertie cumulée axes 1-2 :", variance_axes_1_2, "%\n")
+
+# Graphique des valeurs propres (éboulis) avec annotation
+plot_eboulis <- fviz_eig(res_acp, 
+                         addlabels = TRUE, 
+                         ylim = c(0, 80),
+                         barfill = "#4E84C4",
+                         barcolor = "#4E84C4",
+                         main = "Éboulis des valeurs propres - Critère de Kaiser",
+                         subtitle = "Ligne rouge : λ = 1 (seuil de Kaiser)") +
+  geom_hline(yintercept = 100/ncol(vars_acp), 
+             linetype = "dashed", 
+             color = "red", 
+             size = 1) +
+  annotate("text", x = n_axes_kaiser + 0.5, y = 12, 
+           label = "Seuil Kaiser", color = "red", size = 4) +
+  annotate("text", x = 1.5, y = 40, 
+           label = paste("Variance expliquée axes 1-2 :", variance_axes_1_2, "%"),
+           color = "darkblue", size = 5, fontface = "bold")
+
+print(plot_eboulis)
+```
+
+##  Interprétation de l'éboulis des valeurs propres
+**Structure dimensionnelle de l'analyse :**  
+- **Axe 1** : Explique 77.8% de la variance totale → dimension majeure  
+- **Axe 2** : Explique 12.8% de la variance → dimension secondaire mais significative  
+- **Plan 1-2** : Capture 90.6% de l'information totale → représentation excellente
+
+**Application du critère de Kaiser :**  
+- Seuls **2 axes** présentent une valeur propre supérieure ou égale 1 (seuil de Kaiser)  
+- Les axes 3 à 10 apportent une information résiduelle négligeable  
+- **Conclusion** : On garde le plan factoriel 1-2, ce qui suffit pour analyser la structure des données
+
+
+
+```{r cercle-correlations, fig.height=7, fig.width=10, echo=FALSE}
+# ---  CERCLE DES CORRÉLATIONS ---
+cat("\n CERCLE DES CORRÉLATIONS\n")
+
+# Contribution des variables aux axes
+var_contrib <- res_acp$var$contrib
+var_cos2 <- res_acp$var$cos2
+var_coord <- res_acp$var$coord
+
+# Variables bien représentées (cos² > 0.5 sur au moins un axe)
+variables_biens_representees <- rownames(var_cos2)[apply(var_cos2[,1:2] > 0.5, 1, any)]
+cat("Variables bien représentées (cos² > 0.5) :", 
+    paste(variables_biens_representees, collapse = ", "), "\n")
+
+# Cercle des corrélations avec qualité de représentation
+plot_correlations <- fviz_pca_var(res_acp,
+                                  col.var = "cos2",
+                                  gradient.cols = c("#999999", "#E7B800", "#FC4E07"),
+                                  repel = TRUE,
+                                  title = "Cercle des corrélations - Qualité de représentation",
+                                  subtitle = "Couleur selon cos² (qualité de projection)") +
+  theme_minimal()
+
+print(plot_correlations)
+```
+
+##  Interprétation du cercle des corrélations
+
+**Structure des relations entre variables :**
+
+### **Axe 1 (77.8% de variance) - Dimension "Taille et Équipement"**
+- **Pôle POSITIF** (droite) : 
+  - `Pop`, `Entr`, `Rece`, `Sean`, `Salle`, `Faut`, `Multi`
+  - **Interprétation** : Variables de taille démographique, fréquentation et équipement moderne
+- **Pôle NÉGATIF** (gauche) :
+  - `Comm`, `Artes`
+  - **Interprétation** : Variables de densité territoriale et cinéma culturel
+
+### **Axe 2 (12.8% de variance) - Dimension "Type d'Exploitation"**
+- **Pôle POSITIF** (haut) :
+  - `Comm`, `Artes`, `Etab`
+  - **Interprétation** : Modèle de proximité, cinéma art et essai, établissements diversifiés
+- **Pôle NÉGATIF** (bas) :
+  - `Multi`, `Salle`
+  - **Interprétation** : Modèle de concentration, multiplexes, grandes salles
+
+**Qualité de représentation :**
+- Toutes les variables présentent un **cos² élevé** (couleurs chaudes)
+- Excellente représentation sur le plan factoriel
+
+
+
+```{r projection-departements, fig.height=7, fig.width=10, echo=FALSE}
+# ---  PROJECTION DES INDIVIDUS AVEC QUALITÉ ---
+cat("\n PROJECTION DES DÉPARTEMENTS\n")
+
+# Qualité de représentation des individus
+cos2_ind <- res_acp$ind$cos2
+qualite_ind <- data.frame(
+  NomDep = data$NomDep,
+  Cos2_Axe1 = round(cos2_ind[,1], 3),
+  Cos2_Axe2 = round(cos2_ind[,2], 3),
+  Qualite_Totale = round(rowSums(cos2_ind[,1:2]), 3)
+)
+
+# Départements bien représentés (cos² total > 0.7)
+departements_biens_representes <- qualite_ind %>%
+  filter(Qualite_Totale > 0.7) %>%
+  arrange(desc(Qualite_Totale))
+
+cat("Départements bien représentés (cos² > 0.7) :", 
+    nrow(departements_biens_representes), "/", nrow(data), "\n")
+
+# Graphique avec qualité de représentation
+plot_individus_qualite <- fviz_pca_ind(res_acp,
+                                       col.ind = "cos2",
+                                       gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+                                       repel = FALSE,
+                                       alpha.ind = 0.7,
+                                       title = "Projection des départements - Qualité de représentation",
+                                       subtitle = "Couleur selon cos² (qualité de projection sur le plan 1-2)") +
+  theme_minimal()
+
+print(plot_individus_qualite)
+```
+
+##  Interprétation de la projection des départements
+
+**Positionnement territorial sur le plan factoriel :**
+
+### **Quadrant DROITE-HAUT**
+- **Profil** : Départements à forte densité d'équipement et orientation culturelle
+- **Caractéristiques** : Nombreuses communes équipées, présence d'art et essai
+- **Qualité** : Points oranges = bonne représentation
+
+### **Quadrant DROITE-BAS**
+- **Profil** : Grandes agglomérations très équipées
+- **Caractéristiques** : Forte population, multiplexes, haute fréquentation
+- **Exemples** : Paris, grandes métropoles régionales
+
+### **Quadrant GAUCHE-HAUT**
+- **Profil** : Territoires ruraux avec cinéma de proximité
+- **Caractéristiques** : Faible population mais bonne couverture territoriale
+
+### **Quadrant GAUCHE-BAS**
+- **Profil** : Départements peu équipés
+- **Caractéristiques** : Faible densité d'équipement et de fréquentation
+
+**Qualité de représentation :**
+- `r nrow(departements_biens_representes)` départements sur `r nrow(data)` bien représentés (cos² > 0.7)
+- Couleurs chaudes = excellente qualité de projection
+- Couleurs froides = représentation moins précise
+
+
+
+```{r synthese-acp, fig.height=8, fig.width=12, echo=FALSE}
+# --- CLASSIFICATION HIÉRARCHIQUE ASCENDANTE ---
+#cat("\n CLASSIFICATION HIÉRARCHIQUE\n")
+
+# Calcul des distances sur les coordonnées factorielles
+coords_axes <- res_acp$ind$coord[,1:n_axes_kaiser]
+dist_mat <- dist(coords_axes)
+
+# CAH avec critère de Ward
+cah <- hclust(dist_mat, method = "ward.D2")
+
+# Découpage en 4 groupes (arbitraire mais interprétable)
+groupes_cah <- cutree(cah, k = 4)
+data$groupe_cah <- groupes_cah
+
+# --- ⃣ CARACTÉRISATION DES GROUPES ---
+#cat("\n PROFILS DES GROUPES\n")
+
+profils_groupes <- data %>%
+  group_by(groupe_cah) %>%
+  summarise(
+    n_dep = n(),
+    Pop_moyenne = round(mean(Pop, na.rm = TRUE), 2),
+    Entr_moyenne = round(mean(Entr, na.rm = TRUE), 2),
+    Salle_moyenne = round(mean(Salle, na.rm = TRUE), 1),
+    Artes_moyen = round(mean(Artes, na.rm = TRUE), 1),
+    Multi_moyen = round(mean(Multi, na.rm = TRUE), 1),
+    Rece_moyenne = round(mean(Rece, na.rm = TRUE), 2)
+  )
+
+#cat("Caractérisation des 4 groupes :\n")
+#print(profils_groupes)
+
+# ---  VISUALISATION ACP + GROUPES ---
+#cat("\n VISUALISATION SYNTHÈSE\n")
+
+# Biplot avec groupes CAH
+plot_synthese <- fviz_pca_biplot(res_acp,
+                                 geom.ind = "point",
+                                 habillage = as.factor(data$groupe_cah),
+                                 addEllipses = TRUE,
+                                 ellipse.type = "convex",
+                                 ellipse.level = 0.95,
+                                 col.var = "black",
+                                 alpha.var = 0.7,
+                                 repel = TRUE,
+                                 title = paste("Typologie intégrée - ACP + Classification (", 
+                                               variance_axes_1_2, "% variance expliquée)", sep = ""),
+                                 subtitle = "Projection sur les axes 1-2 avec groupes CAH") +
+  scale_color_manual(values = c("#2E9FDF", "#00AFBB", "#E7B800", "#FC4E07"),
+                     name = "Groupes CAH") +
+  theme_minimal()
+
+print(plot_synthese)
+```
+
+##  Interprétation de la typologie intégrée ACP + Classification
+
+### **Groupe 1 (Bleu) - "Métropoles cinéphiles"**
+- **Position** : Extrême droite du graphique
+- **Caractéristiques** : Forte population, équipement important, haute fréquentation
+- **Équipement** : Multiplexes dominants, nombreuses salles
+- **Performance** : Recettes élevées
+
+### **Groupe 2 (Turquoise) - "Agglomérations équilibrées"**
+- **Position** : Centre-droit
+- **Caractéristiques** : Population moyenne, bon équipement, fréquentation soutenue
+- **Équipement** : Mixité multiplexes/art et essai
+- **Performance** : Recettes correctes
+
+### **Groupe 3 (Jaune) - "Territoires de proximité"**
+- **Position** : Centre-gauche
+- **Caractéristiques** : Faible population mais bonne densité d'équipement
+- **Équipement** : Cinéma art et essai, établissements de proximité
+- **Performance** : Fréquentation modérée
+
+### **Groupe 4 (Rouge) - "Déserts cinématographiques"**
+- **Position** : Extrême gauche
+- **Caractéristiques** : Très faible population et équipement
+- **Équipement** : Très limité, peu de multiplexes
+- **Performance** : Faible fréquentation et recettes
+
+##  Synthèse globale 
+
+**Structure bipolaire du paysage cinématographique :**  
+- **Axe majeur** : Opposition métropoles équipées vs territoires ruraux  
+- **Axe secondaire** : Différenciation des modèles d'exploitation
+
+
+
+
+**Conclusion** : L'ACP révèle une structuration claire du territoire cinématographique français, permettant une compréhension fine des dynamiques à l'œuvre et une aide précieuse à la décision pour l'ensemble des acteurs du secteur.
+
+
